@@ -1,8 +1,49 @@
 # neo4j-aura-quarkus-graphql project
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+This project uses 
 
-If you want to learn more about Quarkus, please visit its website: https://quarkus.io/ .
+* [Neo4j Aura](https://www.google.com/search?client=safari&rls=en&q=neo4j+aura&ie=UTF-8&oe=UTF-8)
+* The [Neo4j Java Driver](https://github.com/neo4j/neo4j-java-driver) with [Quarkus](https://quarkus.io)
+* and the [Neo4j-Cypher-DSL](https://github.com/neo4j-contrib/cypher-dsl)
+
+to build a rather dynamic GraphQL application that provides access to the "Neo4j Movie Graph", 
+that comes bundled with Neo4j as well as a list of books from my [good reads project](https://github.com/michael-simons/goodreads).
+
+The application is running as a natively compiled application on
+https://neo4j-aura-sdn-graphql.herokuapp.com. The image has been build with:
+
+```
+./mvnw clean package\
+  -Pnative\
+  -Dquarkus.native.container-build=true\
+  -Dquarkus.container-image.build=true\
+  -Dquarkus.container-image.group=registry.heroku.com/neo4j-aura-quarkus-graphql\
+  -Dquarkus.container-image.name=web\
+  -Dquarkus.container-image.tag=latest
+```
+
+## Run Neo4j
+
+There are several ways to run a Neo4j instance.
+Either download an instance on https://neo4j.com/downloads (Desktop or stand-alone) or use the official Docker image.
+
+### Using the Docker image
+
+To quickly get a temporary instance with the configured credentials up and running, just enter
+
+```
+docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/secret neo4j:4.2
+```
+
+in you terminal. If you want to read up which folders can be mapped and other environment variables, 
+check out https://neo4j.com/docs/operations-manual/current/docker/.
+
+### Create data
+
+The easiest way to populate the database with the example dataset is to open the Neo4j browser (default: http://localhost:7474)
+and start the movie example by typing `:play movies`.
+On the second page of the interactive manual is the creation query.
+Execute it, and the movie dataset will get created.
 
 ## Running the application in dev mode
 
@@ -44,12 +85,3 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./target/neo4j-aura-quarkus-graphql-1.0.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.html.
-
-## Provided examples
-
-### RESTEasy JAX-RS example
-
-REST is easy peasy with this Hello World RESTEasy resource.
-
-[Related guide section...](https://quarkus.io/guides/getting-started#the-jax-rs-resources)
-# neo4j-aura-quarkus-graphql

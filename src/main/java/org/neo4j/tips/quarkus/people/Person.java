@@ -8,6 +8,7 @@ import org.eclipse.microprofile.graphql.Id;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.types.MapAccessor;
+import org.neo4j.tips.quarkus.books.Book;
 import org.neo4j.tips.quarkus.movies.Movie;
 import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
 
@@ -22,11 +23,16 @@ public class Person {
 		var person = new Person();
 
 		person.name = r.get("name").asString();
-		person.born = r.containsKey("born") ? r.get("born").asInt() : null;
+		person.born = r.containsKey("born") && !r.get("born").isNull() ? r.get("born").asInt(0) : null;
 		person.actedIn = r.containsKey("actedIn") ? r.get("actedIn")
 			.asList(Value::asNode)
 			.stream()
 			.map(Movie::of)
+			.collect(Collectors.toList()) : null;
+		person.wrote = r.containsKey("wrote") ? r.get("wrote")
+			.asList(Value::asNode)
+			.stream()
+			.map(Book::of)
 			.collect(Collectors.toList()) : null;
 		return person;
 	}
@@ -38,6 +44,8 @@ public class Person {
 
 	private List<Movie> actedIn;
 
+	private List<Book> wrote;
+
 	public String getName() {
 		return name;
 	}
@@ -48,5 +56,9 @@ public class Person {
 
 	public List<Movie> getActedIn() {
 		return actedIn;
+	}
+
+	public List<Book> getWrote() {
+		return wrote;
 	}
 }

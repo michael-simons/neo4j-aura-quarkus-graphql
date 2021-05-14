@@ -1,6 +1,7 @@
 package org.neo4j.tips.quarkus.people;
 
 import static org.neo4j.cypherdsl.core.Cypher.anonParameter;
+import static org.neo4j.cypherdsl.core.Cypher.node;
 import static org.neo4j.cypherdsl.core.executables.ExecutableStatement.makeExecutable;
 
 import graphql.schema.DataFetchingFieldSelectionSet;
@@ -17,10 +18,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Singleton;
 
 import org.neo4j.cypherdsl.core.Conditions;
 import org.neo4j.cypherdsl.core.Cypher;
@@ -28,25 +28,20 @@ import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.driver.Driver;
-import org.neo4j.driver.Value;
-import org.neo4j.driver.Record;
-import org.neo4j.tips.quarkus.movies.MovieService;
-import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
+import org.neo4j.tips.quarkus.utils.Neo4jService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@ApplicationScoped
-public final class PeopleService {
-
-	private final Driver driver;
+@Singleton
+public class PeopleService extends Neo4jService {
 
 	private final ObjectMapper objectMapper;
 
 	private final HttpClient httpClient;
 
 	public PeopleService(Driver driver, ObjectMapper objectMapper) {
+		super(driver);
 
-		this.driver = driver;
 		this.objectMapper = objectMapper;
 
 		this.httpClient = HttpClient.newBuilder()
@@ -57,34 +52,45 @@ public final class PeopleService {
 
 	public CompletableFuture<List<Person>> findPeople(String nameFilter, DataFetchingFieldSelectionSet selectionSet) {
 
-		var p = Cypher.node("Person").named("p");
+		var p = node("Person").named("p");
 
-		PatternElement patternToMatch = p;
+		var optionalMatches = new ArrayList<PatternElement>();
 		var returnedExpressions = new ArrayList<Expression>();
 		if (selectionSet.contains("actedIn")) {
-			var m = Cypher.node("Movie").named("m");
-			patternToMatch = p.relationshipTo(m, "ACTED_IN");
+			var m = node("Movie").named("m");
+			optionalMatches.add(p.relationshipTo(m, "ACTED_IN"));
 			returnedExpressions.add(Functions.collect(m).as("actedIn"));
 		}
 
-		var match = Cypher.match(patternToMatch)
+		if (selectionSet.contains("wrote")) {
+			var b = node("Book").named("b");
+			optionalMatches.add((p.relationshipTo(b, "WROTE")));
+			returnedExpressions.add(Functions.collect(b).as("wrote"));
+		}
+
+		var match = Cypher.match(p)
 			.where(Optional.ofNullable(nameFilter).map(String::trim).filter(Predicate.not(String::isBlank))
 				.map(v -> p.property("name").contains(anonParameter(nameFilter)))
 				.orElseGet(Conditions::noCondition));
 
+		if (!optionalMatches.isEmpty()) {
+			match = match
+				.with(p)
+				.optionalMatch(optionalMatches.toArray(PatternElement[]::new))
+				.where(Conditions.noCondition());
+		}
+
 		Stream.concat(Stream.of("name"), selectionSet.getImmediateFields().stream().map(SelectedField::getName))
 			.distinct()
-			.filter(n -> !"actedIn".equals(n))
+			.filter(n -> !("actedIn".equals(n) || "wrote".equals(n)))
 			.map(n -> p.property(n).as(n))
 			.forEach(returnedExpressions::add);
 
-		var statement = makeExecutable(match.returning(returnedExpressions.toArray(Expression[]::new)).build());
-		var session = driver.asyncSession();
-		System.out.println("running "+ statement.getCypher());
-		return session
-			.readTransactionAsync(tx -> statement.fetchWith(tx, Person::of))
-			.thenCompose(result -> session.closeAsync().thenApply(i -> result))
-			.toCompletableFuture();
+		var statement = makeExecutable(
+			match.returning(returnedExpressions.toArray(Expression[]::new))
+				.build()
+		);
+		return executeStatement(statement, Person::of);
 	}
 
 	public CompletableFuture<String> getShortBio(Person person) {
