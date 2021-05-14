@@ -1,5 +1,6 @@
 package org.neo4j.tips.quarkus.people;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,11 +29,13 @@ public class Person {
 			.asList(Value::asNode)
 			.stream()
 			.map(Movie::of)
+			.sorted(Comparator.nullsLast(Comparator.comparing(Movie::getTitle)))
 			.collect(Collectors.toList()) : null;
 		person.wrote = r.containsKey("wrote") ? r.get("wrote")
 			.asList(Value::asNode)
 			.stream()
 			.map(Book::of)
+			.sorted(Comparator.nullsLast(Comparator.comparing(Book::getTitle)))
 			.collect(Collectors.toList()) : null;
 		return person;
 	}

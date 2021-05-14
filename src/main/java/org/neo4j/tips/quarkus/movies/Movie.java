@@ -1,7 +1,5 @@
 package org.neo4j.tips.quarkus.movies;
 
-import java.util.List;
-
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Id;
 import org.neo4j.driver.Record;
@@ -26,10 +24,10 @@ public class Movie {
 		movie.title = r.get("title").asString();
 		movie.tagline = r.get("tagline").asString();
 		movie.released = r.containsKey("released") ? r.get("released").asInt() : null;
-		movie.actors = new ActorConnection(r.get("actors").asList(v -> {
+		movie.actors = r.containsKey("actors") ? new ActorConnection(r.get("actors").asList(v -> {
 			var person = Person.of(v.get("person").asNode());
 			return new Actor(person, v.get("roles").asList(Value::asString));
-		}, List.of()));
+		})) : null;
 		return movie;
 	}
 

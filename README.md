@@ -10,7 +10,7 @@ to build a rather dynamic GraphQL application that provides access to the "Neo4j
 that comes bundled with Neo4j as well as a list of books from my [good reads project](https://github.com/michael-simons/goodreads).
 
 The application is running as a natively compiled application on
-https://neo4j-aura-sdn-graphql.herokuapp.com. The image has been build with:
+https://neo4j-aura-quarkus-graphql.herokuapp.com. The image has been build with:
 
 ```
 ./mvnw clean package\

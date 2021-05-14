@@ -1,5 +1,6 @@
 package org.neo4j.tips.quarkus.books;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,7 @@ public class Book {
 			.asList(Value::asNode)
 			.stream()
 			.map(Person::of)
+			.sorted(Comparator.comparing(Person::getName))
 			.collect(Collectors.toList()) : null;
 		return book;
 	}

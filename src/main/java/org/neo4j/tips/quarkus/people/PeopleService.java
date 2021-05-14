@@ -1,7 +1,9 @@
 package org.neo4j.tips.quarkus.people;
 
 import static org.neo4j.cypherdsl.core.Cypher.anonParameter;
+import static org.neo4j.cypherdsl.core.Cypher.name;
 import static org.neo4j.cypherdsl.core.Cypher.node;
+import static org.neo4j.cypherdsl.core.Functions.collect;
 import static org.neo4j.cypherdsl.core.executables.ExecutableStatement.makeExecutable;
 
 import graphql.schema.DataFetchingFieldSelectionSet;
@@ -14,6 +16,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -25,9 +28,8 @@ import javax.inject.Singleton;
 import org.neo4j.cypherdsl.core.Conditions;
 import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
-import org.neo4j.cypherdsl.core.Functions;
-import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.driver.Driver;
+import org.neo4j.tips.quarkus.movies.Movie;
 import org.neo4j.tips.quarkus.utils.Neo4jService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,34 +52,40 @@ public class PeopleService extends Neo4jService {
 			.build();
 	}
 
-	public CompletableFuture<List<Person>> findPeople(String nameFilter, DataFetchingFieldSelectionSet selectionSet) {
+	public CompletableFuture<List<Person>> findPeople(String nameFilter, Movie movieFilter,
+		DataFetchingFieldSelectionSet selectionSet) {
 
+		var returnedExpressions = new ArrayList<Expression>();
 		var p = node("Person").named("p");
 
-		var optionalMatches = new ArrayList<PatternElement>();
-		var returnedExpressions = new ArrayList<Expression>();
+		var match = Cypher.match(p).with(p);
+		if (movieFilter != null) {
+			var m = node("Movie").named("m");
+			match = Cypher.match(p.relationshipTo(m, "ACTED_IN"))
+				.where(m.internalId().eq(Cypher.anonParameter(movieFilter.getId())))
+				.with(p);
+		}
+
 		if (selectionSet.contains("actedIn")) {
 			var m = node("Movie").named("m");
-			optionalMatches.add(p.relationshipTo(m, "ACTED_IN"));
-			returnedExpressions.add(Functions.collect(m).as("actedIn"));
+			var actedIn = name("actedIn");
+
+			match = match
+				.optionalMatch(p.relationshipTo(m, "ACTED_IN"))
+				.with(p.getRequiredSymbolicName(), collect(m).as(actedIn));
+			returnedExpressions.add(actedIn);
 		}
 
 		if (selectionSet.contains("wrote")) {
 			var b = node("Book").named("b");
-			optionalMatches.add((p.relationshipTo(b, "WROTE")));
-			returnedExpressions.add(Functions.collect(b).as("wrote"));
-		}
+			var wrote = name("wrote");
 
-		var match = Cypher.match(p)
-			.where(Optional.ofNullable(nameFilter).map(String::trim).filter(Predicate.not(String::isBlank))
-				.map(v -> p.property("name").contains(anonParameter(nameFilter)))
-				.orElseGet(Conditions::noCondition));
-
-		if (!optionalMatches.isEmpty()) {
+			var newVariables = new HashSet<>(returnedExpressions);
+			newVariables.addAll(List.of(p.getRequiredSymbolicName(), collect(b).as("wrote")));
 			match = match
-				.with(p)
-				.optionalMatch(optionalMatches.toArray(PatternElement[]::new))
-				.where(Conditions.noCondition());
+				.optionalMatch(p.relationshipTo(b, "WROTE"))
+				.with(newVariables.toArray(Expression[]::new));
+			returnedExpressions.add(wrote);
 		}
 
 		Stream.concat(Stream.of("name"), selectionSet.getImmediateFields().stream().map(SelectedField::getName))
@@ -87,10 +95,14 @@ public class PeopleService extends Neo4jService {
 			.forEach(returnedExpressions::add);
 
 		var statement = makeExecutable(
-			match.returning(returnedExpressions.toArray(Expression[]::new))
+			match
+				.where(Optional.ofNullable(nameFilter).map(String::trim).filter(Predicate.not(String::isBlank))
+					.map(v -> p.property("name").contains(anonParameter(nameFilter)))
+					.orElseGet(Conditions::noCondition))
+				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
 		);
-		return executeStatement(statement, Person::of);
+		return executeReadStatement(statement, Person::of);
 	}
 
 	public CompletableFuture<String> getShortBio(Person person) {

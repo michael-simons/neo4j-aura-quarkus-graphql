@@ -17,6 +17,7 @@ import org.eclipse.microprofile.graphql.Query;
 import org.eclipse.microprofile.graphql.Source;
 import org.neo4j.tips.quarkus.books.Book;
 import org.neo4j.tips.quarkus.books.BookService;
+import org.neo4j.tips.quarkus.movies.ActorConnection;
 import org.neo4j.tips.quarkus.movies.Movie;
 import org.neo4j.tips.quarkus.movies.MovieService;
 import org.neo4j.tips.quarkus.people.PeopleService;
@@ -47,7 +48,7 @@ public class BooksAndMovies {
 	public CompletableFuture<List<Person>> getPeople(@Name("nameFilter") String nameFilter) {
 
 		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
-		return peopleService.findPeople(nameFilter, env.getSelectionSet());
+		return peopleService.findPeople(nameFilter, null, env.getSelectionSet());
 	}
 
 	@Query("movies")
@@ -57,6 +58,13 @@ public class BooksAndMovies {
 		return movieService.findMovies(titleFilter, null, env.getSelectionSet());
 	}
 
+	@Query("books")
+	public CompletableFuture<List<Book>> getBooks(@Name("titleFilter") String titleFilter) {
+
+		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		return bookService.findBooks(titleFilter, null, env.getSelectionSet());
+	}
+
 	@Mutation
 	public CompletableFuture<List<Book>> updateBooks() {
 
@@ -64,13 +72,24 @@ public class BooksAndMovies {
 	}
 
 	public CompletionStage<List<Movie>> actedIn(@Source Person person) {
-
 		if (person.getActedIn() != null) {
 			return CompletableFuture.completedFuture(person.getActedIn());
 		}
 
 		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
 		return movieService.findMovies(null, person, env.getSelectionSet());
+	}
+
+	public CompletionStage<ActorConnection> actors(@Source Movie movie) {
+
+		if (movie.getActors() != null) {
+			return CompletableFuture.completedFuture(movie.getActors());
+		}
+
+		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		return peopleService.findPeople(null, movie, env.getSelectionSet())
+			.thenCompose(people -> movieService.findRoles(movie, people))
+			.thenApply(actors -> new ActorConnection(actors));
 	}
 
 	public CompletionStage<List<Book>> wrote(@Source Person person) {

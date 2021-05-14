@@ -47,7 +47,7 @@ public class BookService extends Neo4jService {
 		var book = name("b");
 
 		var personNode = Cypher.node("Person").withProperties("name", trim(author)).named("a");
-		var bookNode = Cypher.node("Book").withProperties("title", valueAt(row, 1)).named(book);
+		var bookNode = Cypher.node("Book").withProperties("title", trim(valueAt(row, 1))).named(book);
 
 		ExecutableResultStatement statement;
 		statement = makeExecutable(Cypher
@@ -66,7 +66,7 @@ public class BookService extends Neo4jService {
 				collect(personNode).as("authors"))
 			.build());
 
-		return executeStatement(statement, Book::of);
+		return executeWriteStatement(statement, Book::of);
 	}
 
 	public CompletableFuture<List<Book>> findBooks(
@@ -107,6 +107,6 @@ public class BookService extends Neo4jService {
 				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
 		);
-		return executeStatement(statement, Book::of);
+		return executeReadStatement(statement, Book::of);
 	}
 }
