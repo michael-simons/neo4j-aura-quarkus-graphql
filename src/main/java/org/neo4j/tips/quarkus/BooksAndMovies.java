@@ -59,10 +59,14 @@ public class BooksAndMovies {
 	}
 
 	@Query("books")
-	public CompletableFuture<List<Book>> getBooks(@Name("titleFilter") String titleFilter) {
+	public CompletableFuture<List<Book>> getBooks(@Name("titleFilter") String titleFilter, @Name("authorFilter") String authorFilter) {
 
 		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
-		return bookService.findBooks(titleFilter, null, env.getSelectionSet());
+		Person writtenBy = null;
+		if(authorFilter != null && !authorFilter.isBlank()) {
+			writtenBy = Person.withName(authorFilter);
+		}
+		return bookService.findBooks(titleFilter, writtenBy, env.getSelectionSet());
 	}
 
 	@Mutation

@@ -16,6 +16,12 @@ import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
 @Description("A person has some information about themselves and maybe played in a movie or is an author and wrote books.")
 public class Person {
 
+	public static Person withName(String name) {
+		var person = new Person();
+		person.name = name;
+		return person;
+	}
+
 	public static Person of(Record r) {
 		return of(new RecordMapAccessor(r));
 	}

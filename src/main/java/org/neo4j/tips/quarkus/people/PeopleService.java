@@ -1,6 +1,7 @@
 package org.neo4j.tips.quarkus.people;
 
 import static org.neo4j.cypherdsl.core.Cypher.anonParameter;
+import static org.neo4j.cypherdsl.core.Cypher.match;
 import static org.neo4j.cypherdsl.core.Cypher.name;
 import static org.neo4j.cypherdsl.core.Cypher.node;
 import static org.neo4j.cypherdsl.core.Functions.collect;
@@ -26,7 +27,6 @@ import java.util.stream.Stream;
 import javax.inject.Singleton;
 
 import org.neo4j.cypherdsl.core.Conditions;
-import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.driver.Driver;
 import org.neo4j.tips.quarkus.movies.Movie;
@@ -58,11 +58,11 @@ public class PeopleService extends Neo4jService {
 		var returnedExpressions = new ArrayList<Expression>();
 		var p = node("Person").named("p");
 
-		var match = Cypher.match(p).with(p);
+		var match = match(p).with(p);
 		if (movieFilter != null) {
 			var m = node("Movie").named("m");
-			match = Cypher.match(p.relationshipTo(m, "ACTED_IN"))
-				.where(m.internalId().eq(Cypher.anonParameter(movieFilter.getId())))
+			match = match(p.relationshipTo(m, "ACTED_IN"))
+				.where(m.internalId().eq(anonParameter(movieFilter.getId())))
 				.with(p);
 		}
 

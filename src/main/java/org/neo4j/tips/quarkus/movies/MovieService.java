@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import javax.inject.Singleton;
 
 import org.neo4j.cypherdsl.core.Conditions;
-import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.PatternElement;
@@ -43,7 +42,7 @@ public class MovieService extends Neo4jService {
 		var p = node("Person").named("p");
 		var m = node("Movie").named("m");
 		var statement = makeExecutable(match(p.relationshipTo(m, "ACTED_IN").named("r"))
-			.where(m.internalId().eq(Cypher.anonParameter(movie.getId())))
+			.where(m.internalId().eq(anonParameter(movie.getId())))
 			.returning(p.property("name").as("name"), name("r").property("roles").as("roles")).build());
 
 		var peopleByName = people.stream().collect(Collectors.toMap(Person::getName, Function.identity()));

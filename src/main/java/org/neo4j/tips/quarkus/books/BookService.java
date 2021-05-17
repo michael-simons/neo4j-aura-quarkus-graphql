@@ -2,6 +2,8 @@ package org.neo4j.tips.quarkus.books;
 
 import static org.neo4j.cypherdsl.core.Cypher.anonParameter;
 import static org.neo4j.cypherdsl.core.Cypher.literalOf;
+import static org.neo4j.cypherdsl.core.Cypher.loadCSV;
+import static org.neo4j.cypherdsl.core.Cypher.match;
 import static org.neo4j.cypherdsl.core.Cypher.name;
 import static org.neo4j.cypherdsl.core.Cypher.node;
 import static org.neo4j.cypherdsl.core.Cypher.valueAt;
@@ -23,8 +25,8 @@ import java.util.function.Predicate;
 
 import javax.inject.Singleton;
 
+import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Conditions;
-import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.PatternElement;
@@ -46,19 +48,19 @@ public class BookService extends Neo4jService {
 		var author = name("author");
 		var book = name("b");
 
-		var personNode = Cypher.node("Person").withProperties("name", trim(author)).named("a");
-		var bookNode = Cypher.node("Book").withProperties("title", trim(valueAt(row, 1))).named(book);
+		var personNode = node("Person").withProperties("name", trim(author)).named("a");
+		var bookNode = node("Book").withProperties("title", trim(valueAt(row, 1))).named(book);
 
 		ExecutableResultStatement statement;
-		statement = makeExecutable(Cypher
-			.loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
+		statement = makeExecutable(
+			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
 			.as(row).withFieldTerminator(";")
 			.merge(bookNode)
 			.set(book.property("type").to(valueAt(row, 2)))
 			.with(book, row)
 			.unwind(split(valueAt(row, 0), "&")).as(author)
 			.with(book, split(author, ",").as(author))
-			.with(book, trim(coalesce(valueAt(author, 1), Cypher.literalOf(""))).concat(literalOf(" "))
+			.with(book, trim(coalesce(valueAt(author, 1), literalOf(""))).concat(literalOf(" "))
 				.concat(trim(valueAt(author, 0))).as(author))
 			.merge(personNode)
 			.merge(personNode.relationshipTo(bookNode, "WROTE").named("r"))
@@ -78,12 +80,14 @@ public class BookService extends Neo4jService {
 		var b = node("Book").named("b");
 
 		PatternElement patternToMatch = b;
+		Condition authorCondition = Conditions.noCondition();
 		if (personFilter != null) {
-			var p = node("Person").named("p").withProperties("name", anonParameter(personFilter.getName()));
+			var p = node("Person").named("p");
 			patternToMatch = p.relationshipTo(b, "WROTE");
+			authorCondition = p.property("name").contains(anonParameter(personFilter.getName()));
 		}
 
-		var match = Cypher.match(patternToMatch);
+		var match = match(patternToMatch);
 
 		var returnedExpressions = new ArrayList<Expression>();
 		returnedExpressions.add(Functions.id(b).as("id"));
@@ -104,6 +108,7 @@ public class BookService extends Neo4jService {
 			match.where(Optional.ofNullable(titleFilter).map(String::trim).filter(Predicate.not(String::isBlank))
 				.map(v -> b.property("title").contains(anonParameter(titleFilter)))
 				.orElseGet(Conditions::noCondition))
+				.and(authorCondition)
 				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
 		);

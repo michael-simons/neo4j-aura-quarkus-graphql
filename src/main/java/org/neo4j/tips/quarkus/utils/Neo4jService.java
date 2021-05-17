@@ -8,7 +8,7 @@ import org.neo4j.cypherdsl.core.executables.ExecutableResultStatement;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Record;
 
-public class Neo4jService {
+public abstract class Neo4jService {
 
 	protected final Driver driver;
 
