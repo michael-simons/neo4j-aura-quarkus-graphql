@@ -6,6 +6,7 @@ import io.smallrye.graphql.api.Context;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
@@ -24,6 +25,7 @@ import org.neo4j.tips.quarkus.people.PeopleService;
 import org.neo4j.tips.quarkus.people.Person;
 
 @GraphQLApi
+@ApplicationScoped
 public class BooksAndMovies {
 
 	private final Context context;
