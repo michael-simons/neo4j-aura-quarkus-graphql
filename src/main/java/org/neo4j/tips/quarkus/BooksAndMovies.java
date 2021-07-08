@@ -49,21 +49,21 @@ public class BooksAndMovies {
 	@Query("people")
 	public CompletableFuture<List<Person>> getPeople(@Name("nameFilter") String nameFilter) {
 
-		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		var env = context.unwrap(DataFetchingEnvironment.class);
 		return peopleService.findPeople(nameFilter, null, env.getSelectionSet());
 	}
 
 	@Query("movies")
 	public CompletableFuture<List<Movie>> getMovies(@Name("titleFilter") String titleFilter) {
 
-		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		var env = context.unwrap(DataFetchingEnvironment.class);
 		return movieService.findMovies(titleFilter, null, env.getSelectionSet());
 	}
 
 	@Query("books")
 	public CompletableFuture<List<Book>> getBooks(@Name("titleFilter") String titleFilter, @Name("authorFilter") String authorFilter) {
 
-		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		var env = context.unwrap(DataFetchingEnvironment.class);
 		Person writtenBy = null;
 		if(authorFilter != null && !authorFilter.isBlank()) {
 			writtenBy = Person.withName(authorFilter);
@@ -82,7 +82,7 @@ public class BooksAndMovies {
 			return CompletableFuture.completedFuture(person.getActedIn());
 		}
 
-		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		var env = context.unwrap(DataFetchingEnvironment.class);
 		return movieService.findMovies(null, person, env.getSelectionSet());
 	}
 
@@ -92,7 +92,7 @@ public class BooksAndMovies {
 			return CompletableFuture.completedFuture(movie.getActors());
 		}
 
-		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		var env = context.unwrap(DataFetchingEnvironment.class);
 		return peopleService.findPeople(null, movie, env.getSelectionSet())
 			.thenCompose(people -> movieService.findRoles(movie, people))
 			.thenApply(actors -> new ActorConnection(actors));
@@ -104,7 +104,7 @@ public class BooksAndMovies {
 			return CompletableFuture.completedFuture(person.getWrote());
 		}
 
-		DataFetchingEnvironment env = context.unwrap(DataFetchingEnvironment.class);
+		var env = context.unwrap(DataFetchingEnvironment.class);
 		return bookService.findBooks(null, person, env.getSelectionSet());
 	}
 
