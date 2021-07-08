@@ -46,25 +46,24 @@ public class BookService extends Neo4jService {
 
 		var row = name("row");
 		var author = name("author");
-		var book = name("b");
 
 		var personNode = node("Person").withProperties("name", trim(author)).named("a");
-		var bookNode = node("Book").withProperties("title", trim(valueAt(row, 1))).named(book);
+		var bookNode = node("Book").withProperties("title", trim(valueAt(row, 1))).named("b");
 
 		ExecutableResultStatement statement;
 		statement = makeExecutable(
 			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
 			.as(row).withFieldTerminator(";")
 			.merge(bookNode)
-			.set(book.property("type").to(valueAt(row, 2)))
-			.with(book, row)
+			.set(bookNode.property("type").to(valueAt(row, 2)))
+			.with(bookNode, row)
 			.unwind(split(valueAt(row, 0), "&")).as(author)
-			.with(book, split(author, ",").as(author))
-			.with(book, trim(coalesce(valueAt(author, 1), literalOf(""))).concat(literalOf(" "))
+			.with(bookNode, split(author, ",").as(author))
+			.with(bookNode, trim(coalesce(valueAt(author, 1), literalOf(""))).concat(literalOf(" "))
 				.concat(trim(valueAt(author, 0))).as(author))
 			.merge(personNode)
 			.merge(personNode.relationshipTo(bookNode, "WROTE").named("r"))
-			.returning(bookNode.internalId().as("id"), book.property("title").as("title"),
+			.returning(bookNode.internalId().as("id"), bookNode.property("title").as("title"),
 				collect(personNode).as("authors"))
 			.build());
 

@@ -72,7 +72,7 @@ public class PeopleService extends Neo4jService {
 
 			match = match
 				.optionalMatch(p.relationshipTo(m, "ACTED_IN"))
-				.with(p.getRequiredSymbolicName(), collect(m).as(actedIn));
+				.with(p, collect(m).as(actedIn));
 			returnedExpressions.add(actedIn);
 		}
 
