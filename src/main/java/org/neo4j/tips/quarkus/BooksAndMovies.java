@@ -10,6 +10,7 @@ import javax.enterprise.context.ApplicationScoped;
 
 import javax.inject.Inject;
 
+import org.eclipse.microprofile.graphql.DefaultValue;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.GraphQLApi;
 import org.eclipse.microprofile.graphql.Mutation;
@@ -61,14 +62,18 @@ public class BooksAndMovies {
 	}
 
 	@Query("books")
-	public CompletableFuture<List<Book>> getBooks(@Name("titleFilter") String titleFilter, @Name("authorFilter") String authorFilter) {
+	public CompletableFuture<List<Book>> getBooks(
+		@Name("titleFilter") String titleFilter,
+		@Name("authorFilter") String authorFilter,
+		@Name("unreadOnly") @DefaultValue("false") boolean unreadOnly
+	) {
 
 		var env = context.unwrap(DataFetchingEnvironment.class);
 		Person writtenBy = null;
 		if(authorFilter != null && !authorFilter.isBlank()) {
 			writtenBy = Person.withName(authorFilter);
 		}
-		return bookService.findBooks(titleFilter, writtenBy, env.getSelectionSet());
+		return bookService.findBooks(titleFilter, writtenBy, unreadOnly, env.getSelectionSet());
 	}
 
 	@Mutation
@@ -78,6 +83,7 @@ public class BooksAndMovies {
 	}
 
 	public CompletionStage<List<Movie>> actedIn(@Source Person person) {
+
 		if (person.getActedIn() != null) {
 			return CompletableFuture.completedFuture(person.getActedIn());
 		}
@@ -105,7 +111,7 @@ public class BooksAndMovies {
 		}
 
 		var env = context.unwrap(DataFetchingEnvironment.class);
-		return bookService.findBooks(null, person, env.getSelectionSet());
+		return bookService.findBooks(null, person, false, env.getSelectionSet());
 	}
 
 	@Description("A short biographie of the person, maybe empty if there is none to be found.")

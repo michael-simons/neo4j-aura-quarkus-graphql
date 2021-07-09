@@ -25,7 +25,6 @@ import java.util.function.Predicate;
 
 import javax.inject.Singleton;
 
-import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Conditions;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
@@ -47,24 +46,25 @@ public class BookService extends Neo4jService {
 		var row = name("row");
 		var author = name("author");
 
-		var personNode = node("Person").withProperties("name", trim(author)).named("a");
-		var bookNode = node("Book").withProperties("title", trim(valueAt(row, 1))).named("b");
+		var person = node("Person").withProperties("name", trim(author)).named("a");
+		var book = node("Book").withProperties("title", trim(valueAt(row, 1))).named("b");
 
-		ExecutableResultStatement statement;
-		statement = makeExecutable(
+		var statement = makeExecutable(
 			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
 			.as(row).withFieldTerminator(";")
-			.merge(bookNode)
-			.set(bookNode.property("type").to(valueAt(row, 2)))
-			.with(bookNode, row)
+			.merge(book)
+			.set(
+				book.property("type").to(valueAt(row, 2)),
+				book.property("state").to(valueAt(row, 3))
+			)
+			.with(book, row)
 			.unwind(split(valueAt(row, 0), "&")).as(author)
-			.with(bookNode, split(author, ",").as(author))
-			.with(bookNode, trim(coalesce(valueAt(author, 1), literalOf(""))).concat(literalOf(" "))
+			.with(book, split(author, ",").as(author))
+			.with(book, trim(coalesce(valueAt(author, 1), literalOf(""))).concat(literalOf(" "))
 				.concat(trim(valueAt(author, 0))).as(author))
-			.merge(personNode)
-			.merge(personNode.relationshipTo(bookNode, "WROTE").named("r"))
-			.returning(bookNode.internalId().as("id"), bookNode.property("title").as("title"),
-				collect(personNode).as("authors"))
+			.merge(person)
+			.merge(person.relationshipTo(book, "WROTE").named("r"))
+			.returning(book.internalId().as("id"), book.property("title").as("title"), collect(person).as("authors"))
 			.build());
 
 		return executeWriteStatement(statement, Book::of);
@@ -73,17 +73,23 @@ public class BookService extends Neo4jService {
 	public CompletableFuture<List<Book>> findBooks(
 		String titleFilter,
 		Person personFilter,
+		boolean unreadOnly,
 		DataFetchingFieldSelectionSet selectionSet
 	) {
 
 		var b = node("Book").named("b");
 
 		PatternElement patternToMatch = b;
-		Condition authorCondition = Conditions.noCondition();
+		var conditions = Conditions.noCondition();
+
+		if (unreadOnly) {
+			conditions = b.property("state").isEqualTo(literalOf("U"));
+		}
+
 		if (personFilter != null) {
 			var p = node("Person").named("p");
 			patternToMatch = p.relationshipTo(b, "WROTE");
-			authorCondition = p.property("name").contains(anonParameter(personFilter.getName()));
+			conditions = conditions.and(p.property("name").contains(anonParameter(personFilter.getName())));
 		}
 
 		var match = match(patternToMatch);
@@ -107,7 +113,7 @@ public class BookService extends Neo4jService {
 			match.where(Optional.ofNullable(titleFilter).map(String::trim).filter(Predicate.not(String::isBlank))
 				.map(v -> b.property("title").contains(anonParameter(titleFilter)))
 				.orElseGet(Conditions::noCondition))
-				.and(authorCondition)
+				.and(conditions)
 				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
 		);

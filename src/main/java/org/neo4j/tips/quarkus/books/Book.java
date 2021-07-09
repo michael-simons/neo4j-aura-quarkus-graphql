@@ -14,6 +14,27 @@ import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
 
 public class Book {
 
+	enum State {
+
+		READ,
+		UNREAD,
+		UNKNOWN;
+
+		static State of(String value) {
+			if (value == null) {
+				return null;
+			}
+			switch (value) {
+				case "R":
+					return State.READ;
+				case "U":
+					return State.UNREAD;
+				default:
+					return State.UNKNOWN;
+			}
+		}
+	}
+
 	public static Book of(Record r) {
 		return of(new RecordMapAccessor(r));
 	}
@@ -24,6 +45,7 @@ public class Book {
 
 		book.id = r instanceof Node ? ((Node) r).id() : r.get("id").asLong();
 		book.title = r.get("title").asString();
+		book.state = State.of(r.get("state").asString());
 		book.authors = r.containsKey("authors") ? r.get("authors")
 			.asList(Value::asNode)
 			.stream()
@@ -38,6 +60,8 @@ public class Book {
 
 	private String title;
 
+	private State state;
+
 	private List<Person> authors;
 
 	public Long getId() {
@@ -50,5 +74,9 @@ public class Book {
 
 	public List<Person> getAuthors() {
 		return authors;
+	}
+
+	public State getState() {
+		return state;
 	}
 }
