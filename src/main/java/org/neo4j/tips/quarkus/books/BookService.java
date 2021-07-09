@@ -29,7 +29,6 @@ import org.neo4j.cypherdsl.core.Conditions;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.PatternElement;
-import org.neo4j.cypherdsl.core.executables.ExecutableResultStatement;
 import org.neo4j.driver.Driver;
 import org.neo4j.tips.quarkus.people.Person;
 import org.neo4j.tips.quarkus.utils.Neo4jService;
@@ -47,15 +46,18 @@ public class BookService extends Neo4jService {
 		var author = name("author");
 
 		var person = node("Person").withProperties("name", trim(author)).named("a");
-		var book = node("Book").withProperties("title", trim(valueAt(row, 1))).named("b");
+		var book = node("Book").named("b");
+
+		var bookTitle = book.property("title");
+		var bookState = book.property("state");
 
 		var statement = makeExecutable(
 			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
 			.as(row).withFieldTerminator(";")
-			.merge(book)
+			.merge(book.withProperties(bookTitle, trim(valueAt(row, 1))))
 			.set(
 				book.property("type").to(valueAt(row, 2)),
-				book.property("state").to(valueAt(row, 3))
+				bookState.to(valueAt(row, 3))
 			)
 			.with(book, row)
 			.unwind(split(valueAt(row, 0), "&")).as(author)
@@ -64,7 +66,7 @@ public class BookService extends Neo4jService {
 				.concat(trim(valueAt(author, 0))).as(author))
 			.merge(person)
 			.merge(person.relationshipTo(book, "WROTE").named("r"))
-			.returning(book.internalId().as("id"), book.property("title").as("title"), collect(person).as("authors"))
+			.returning(book.internalId().as("id"), bookTitle, bookState, collect(person).as("authors"))
 			.build());
 
 		return executeWriteStatement(statement, Book::of);

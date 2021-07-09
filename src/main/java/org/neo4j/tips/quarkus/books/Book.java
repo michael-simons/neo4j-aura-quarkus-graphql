@@ -44,8 +44,8 @@ public class Book {
 		var book = new Book();
 
 		book.id = r instanceof Node ? ((Node) r).id() : r.get("id").asLong();
-		book.title = r.get("title").asString();
-		book.state = State.of(r.get("state").asString());
+		book.title = r.get("title").asString(r.get("b.title").asString());
+		book.state = State.of(r.get("state").asString(r.get("b.state").asString()));
 		book.authors = r.containsKey("authors") ? r.get("authors")
 			.asList(Value::asNode)
 			.stream()
