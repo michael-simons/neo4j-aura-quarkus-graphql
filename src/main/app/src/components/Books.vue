@@ -1,11 +1,5 @@
 <template>
-  <div v-if="fetching">
-    Loading...
-  </div>
-  <div v-else-if="error">
-    Oh no... {{ error }}
-  </div>
-  <div v-else>
+  <div>
     <p>
       Book sources are there: <a href="https://github.com/michael-simons/goodreads">michael-simons/goodreads</a>,
       a GraphQL UI instance is <a
@@ -32,22 +26,30 @@
     <p>In case new books have been added to the <em>goodreads</em> repository, they can be fetch here:
       <button v-on:click="fetchNewBooks">Fetch new books</button>
     </p>
-    <br/>
-    <table v-if="data">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Author(s)</th>
-        </tr>
-      </thead>
-      <tfoot/>
-      <tbody>
-        <tr v-for="book in books" v-bind:key="book.id">
-          <td>{{ book.title }}</td>
-          <td>{{ book.authors }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="fetching">
+      Loading...
+    </div>
+    <div v-else-if="error">
+      Oh no... {{ error }}
+    </div>
+    <div v-else>
+      <br/>
+      <table v-if="data">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Author(s)</th>
+          </tr>
+        </thead>
+        <tfoot/>
+        <tbody>
+          <tr v-for="book in books" v-bind:key="book.id">
+            <td>{{ book.title }}</td>
+            <td>{{ book.authors }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -62,7 +64,7 @@ export default {
     const unreadOnly = ref(false);
     const filter = ref("");
 
-    const result = useQuery({
+    const getBooks = useQuery({
       query: `
        query ($filter: String!, $unreadOnly: Boolean!) {
         books (titleFilter: $filter, authorFilter: $filter, unreadOnly: $unreadOnly) {
@@ -76,11 +78,10 @@ export default {
       variables: {filter: filter, unreadOnly: unreadOnly}
     });
 
-    const updateBooksResult = useMutation(`
+    const updateBooks = useMutation(`
       mutation ($filter: String!, $unreadOnly: Boolean!) {
-        updateBooks (titleFilter: $filter, authorFilter: $filter, unreadOnly: $unreadOnly) {
+        books: updateBooks (titleFilter: $filter, authorFilter: $filter, unreadOnly: $unreadOnly) {
           title
-          state
           authors {
             name
           }
@@ -91,15 +92,10 @@ export default {
     return {
       unreadOnly,
       filter,
-      fetchNewBooks: function () {
-        updateBooksResult.executeMutation({filter: filter.value, unreadOnly: unreadOnly.value}).then(
-            result => {
-              this.data.books = result.data.updateBooks
-            })
-      },
-      fetching: result.fetching,
-      data: result.data,
-      error: result.error
+      updateBooks,
+      fetching: getBooks.fetching,
+      data: getBooks.data,
+      error: getBooks.error
     };
   },
   data() {
@@ -115,7 +111,14 @@ export default {
       this.filter = this.search.filter;
       this.unreadOnly = this.search.unreadOnly;
       e.preventDefault();
-    }
+    },
+    fetchNewBooks: function () {
+      this.updateBooks
+          .executeMutation({filter: this.search.filter, unreadOnly: this.search.unreadOnly})
+          .then(result => {
+            this.data.books = result.data.books;
+          })
+    },
   },
   computed: {
     books() {
