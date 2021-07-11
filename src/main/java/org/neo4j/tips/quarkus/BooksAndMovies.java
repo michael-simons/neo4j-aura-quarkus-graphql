@@ -77,9 +77,9 @@ public class BooksAndMovies {
 	}
 
 	@Mutation
-	public CompletableFuture<List<Book>> updateBooks() {
+	public CompletableFuture<List<Book>> updateBooks(@Name("unreadOnly") @DefaultValue("false") boolean unreadOnly) {
 
-		return bookService.updateBooks();
+		return bookService.updateBooks(unreadOnly);
 	}
 
 	public CompletionStage<List<Movie>> actedIn(@Source Person person) {

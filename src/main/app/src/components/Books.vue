@@ -17,8 +17,10 @@
                                                     v-model="filter" width="256"/>&#160;
     <label>Unread only</label> <input type="checkbox" v-model="unreadOnly"/>
     <br/>
-    <p>In case new books have been added to the <em>goodreads</em> repository, they can be fetch here: <button v-on:click="fetchNewBooks">Fetch new books</button></p>
-    <br />
+    <p>In case new books have been added to the <em>goodreads</em> repository, they can be fetch here:
+      <button v-on:click="fetchNewBooks">Fetch new books</button>
+    </p>
+    <br/>
     <table v-if="data">
       <thead>
         <tr>
@@ -38,7 +40,7 @@
 </template>
 
 <script>
-import {useQuery, useMutation} from '@urql/vue';
+import {useMutation, useQuery} from '@urql/vue';
 import {ref} from 'vue';
 
 export default {
@@ -61,8 +63,8 @@ export default {
     });
 
     const updateBooksResult = useMutation(`
-      mutation {
-        updateBooks {
+      mutation ($unreadOnly: Boolean!) {
+        updateBooks (unreadOnly: $unreadOnly) {
           title
           state
           authors {
@@ -75,8 +77,10 @@ export default {
     return {
       unreadOnly,
       fetchNewBooks: function () {
-        updateBooksResult.executeMutation().then (
-            result => {this.data.books = result.data.updateBooks.filter(book => !unreadOnly.value || book.state == 'UNREAD')})
+        updateBooksResult.executeMutation({'unreadOnly': unreadOnly.value}).then(
+            result => {
+              this.data.books = result.data.updateBooks
+            })
       },
       fetching: result.fetching,
       data: result.data,

@@ -25,9 +25,11 @@ import java.util.function.Predicate;
 
 import javax.inject.Singleton;
 
+import org.neo4j.cypherdsl.core.Condition;
 import org.neo4j.cypherdsl.core.Conditions;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.Functions;
+import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.driver.Driver;
 import org.neo4j.tips.quarkus.people.Person;
@@ -40,16 +42,19 @@ public class BookService extends Neo4jService {
 		super(driver);
 	}
 
-	public CompletableFuture<List<Book>> updateBooks() {
+	public CompletableFuture<List<Book>> updateBooks(boolean unreadOnly) {
 
 		var row = name("row");
 		var author = name("author");
+		var authors = name("authors");
 
 		var person = node("Person").withProperties("name", trim(author)).named("a");
 		var book = node("Book").named("b");
 
 		var bookTitle = book.property("title");
 		var bookState = book.property("state");
+
+		var conditions = createDefaultBookCondition(book, unreadOnly);
 
 		var statement = makeExecutable(
 			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
@@ -66,7 +71,9 @@ public class BookService extends Neo4jService {
 				.concat(trim(valueAt(author, 0))).as(author))
 			.merge(person)
 			.merge(person.relationshipTo(book, "WROTE").named("r"))
-			.returning(book.internalId().as("id"), bookTitle, bookState, collect(person).as("authors"))
+			.with(book, collect(person).as(authors))
+			.where(conditions)
+			.returning(book.internalId().as("id"), bookTitle, bookState, authors )
 			.build());
 
 		return executeWriteStatement(statement, Book::of);
@@ -79,46 +86,50 @@ public class BookService extends Neo4jService {
 		DataFetchingFieldSelectionSet selectionSet
 	) {
 
-		var b = node("Book").named("b");
+		var book = node("Book").named("b");
+		var conditions = createDefaultBookCondition(book, unreadOnly);
 
-		PatternElement patternToMatch = b;
-		var conditions = Conditions.noCondition();
-
-		if (unreadOnly) {
-			conditions = b.property("state").isEqualTo(literalOf("U"));
-		}
-
+		PatternElement patternToMatch = book;
 		if (personFilter != null) {
 			var p = node("Person").named("p");
-			patternToMatch = p.relationshipTo(b, "WROTE");
+			patternToMatch = p.relationshipTo(book, "WROTE");
 			conditions = conditions.and(p.property("name").contains(anonParameter(personFilter.getName())));
 		}
 
 		var match = match(patternToMatch);
 
 		var returnedExpressions = new ArrayList<Expression>();
-		returnedExpressions.add(Functions.id(b).as("id"));
+		returnedExpressions.add(Functions.id(book).as("id"));
 		if (selectionSet.contains("authors") || personFilter != null) {
 			var a = name("a");
 			var r = name("w");
-			match = match.match(b.relationshipFrom(node("Person").named(a), "WROTE").named(r));
+			match = match.match(book.relationshipFrom(node("Person").named(a), "WROTE").named(r));
 			returnedExpressions.add(collect(a).as("authors"));
 		}
 
 		selectionSet.getImmediateFields().stream().map(SelectedField::getName)
 			.distinct()
 			.filter(n -> !("authors".equals(n) || "id".equals(n)))
-			.map(n -> b.property(n).as(n))
+			.map(n -> book.property(n).as(n))
 			.forEach(returnedExpressions::add);
 
 		var statement = makeExecutable(
 			match.where(Optional.ofNullable(titleFilter).map(String::trim).filter(Predicate.not(String::isBlank))
-				.map(v -> b.property("title").contains(anonParameter(titleFilter)))
+				.map(v -> book.property("title").contains(anonParameter(titleFilter)))
 				.orElseGet(Conditions::noCondition))
 				.and(conditions)
 				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
 		);
 		return executeReadStatement(statement, Book::of);
+	}
+
+	private static Condition createDefaultBookCondition(Node bookNode, boolean unreadOnly) {
+
+		var conditions = Conditions.noCondition();
+		if (unreadOnly) {
+			conditions = bookNode.property("state").isEqualTo(literalOf("U"));
+		}
+		return conditions;
 	}
 }
