@@ -17,6 +17,11 @@ import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
 public class Person {
 
 	public static Person withName(String name) {
+
+		if (name == null || name.isBlank()) {
+			return null;
+		}
+
 		var person = new Person();
 		person.name = name;
 		return person;

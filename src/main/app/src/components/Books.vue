@@ -13,10 +13,22 @@
       and last but not least, the sources of this applications are on GitHub as well: <a
         href="https://github.com/michael-simons/neo4j-aura-quarkus-graphql">michael-simons/neo4j-aura-quarkus-graphql</a>.
     </p>
-    <label>Filter by title or author</label> <input type="text" placeholder="Filter by title or author."
-                                                    v-model="filter" width="256"/>&#160;
-    <label>Unread only</label> <input type="checkbox" v-model="unreadOnly"/>
-    <br/>
+    <form
+        id="app"
+        @submit="checkForm"
+        method="post"
+    >
+      <label>Search by title or author</label> <input type="text" placeholder="Search by title or author."
+                                                      v-model="search.filter" width="256"/>&#160;
+      <label>Unread only</label> <input type="checkbox" v-model="search.unreadOnly"/>
+      <br/>
+      <p>
+        <input
+            type="submit"
+            value="Search"
+        >
+      </p>
+    </form>
     <p>In case new books have been added to the <em>goodreads</em> repository, they can be fetch here:
       <button v-on:click="fetchNewBooks">Fetch new books</button>
     </p>
@@ -48,10 +60,12 @@ export default {
   setup() {
 
     const unreadOnly = ref(false);
+    const filter = ref("");
+
     const result = useQuery({
       query: `
-       query ($unreadOnly: Boolean!) {
-        books ( unreadOnly: $unreadOnly) {
+       query ($filter: String!, $unreadOnly: Boolean!) {
+        books (titleFilter: $filter, authorFilter: $filter, unreadOnly: $unreadOnly) {
           title
           authors {
             name
@@ -59,12 +73,12 @@ export default {
         }
       }
       `,
-      variables: {unreadOnly}
+      variables: {filter: filter, unreadOnly: unreadOnly}
     });
 
     const updateBooksResult = useMutation(`
-      mutation ($unreadOnly: Boolean!) {
-        updateBooks (unreadOnly: $unreadOnly) {
+      mutation ($filter: String!, $unreadOnly: Boolean!) {
+        updateBooks (titleFilter: $filter, authorFilter: $filter, unreadOnly: $unreadOnly) {
           title
           state
           authors {
@@ -76,8 +90,9 @@ export default {
 
     return {
       unreadOnly,
+      filter,
       fetchNewBooks: function () {
-        updateBooksResult.executeMutation({'unreadOnly': unreadOnly.value}).then(
+        updateBooksResult.executeMutation({filter: filter.value, unreadOnly: unreadOnly.value}).then(
             result => {
               this.data.books = result.data.updateBooks
             })
@@ -89,12 +104,21 @@ export default {
   },
   data() {
     return {
-      filter: ''
+      search: {
+        unreadOnly: false,
+        filter: ''
+      }
+    }
+  },
+  methods: {
+    checkForm: function (e) {
+      this.filter = this.search.filter;
+      this.unreadOnly = this.search.unreadOnly;
+      e.preventDefault();
     }
   },
   computed: {
     books() {
-      const searchTerm = this.filter.toLowerCase();
       return this.data.books
           .map(b => {
             return {
@@ -103,12 +127,9 @@ export default {
               authors: b.authors.map(a => a.name).join(", ")
             }
           })
-          .filter(row => {
-            return searchTerm == '' || row.title.toLowerCase().includes(searchTerm) || row.authors.toLowerCase().includes(searchTerm)
-          })
           .sort((b1, b2) => {
-            var result = b1.title.localeCompare(b2.title);
-            if (result == 0) {
+            let result = b1.title.localeCompare(b2.title);
+            if (result === 0) {
               result = b1.authors.localeCompare(b2.authors);
             }
             return result;

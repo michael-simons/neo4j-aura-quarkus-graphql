@@ -6,8 +6,8 @@ import io.smallrye.graphql.api.Context;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import javax.enterprise.context.ApplicationScoped;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.eclipse.microprofile.graphql.DefaultValue;
@@ -69,17 +69,17 @@ public class BooksAndMovies {
 	) {
 
 		var env = context.unwrap(DataFetchingEnvironment.class);
-		Person writtenBy = null;
-		if(authorFilter != null && !authorFilter.isBlank()) {
-			writtenBy = Person.withName(authorFilter);
-		}
-		return bookService.findBooks(titleFilter, writtenBy, unreadOnly, env.getSelectionSet());
+		return bookService.findBooks(titleFilter, Person.withName(authorFilter), unreadOnly, env.getSelectionSet());
 	}
 
 	@Mutation
-	public CompletableFuture<List<Book>> updateBooks(@Name("unreadOnly") @DefaultValue("false") boolean unreadOnly) {
+	public CompletableFuture<List<Book>> updateBooks(
+		@Name("titleFilter") String titleFilter,
+		@Name("authorFilter") String authorFilter,
+		@Name("unreadOnly") @DefaultValue("false") boolean unreadOnly
+	) {
 
-		return bookService.updateBooks(unreadOnly);
+		return bookService.updateBooks(titleFilter, Person.withName(authorFilter), unreadOnly);
 	}
 
 	public CompletionStage<List<Movie>> actedIn(@Source Person person) {

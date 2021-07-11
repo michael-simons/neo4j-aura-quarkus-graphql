@@ -10,6 +10,7 @@ import static org.neo4j.cypherdsl.core.Cypher.valueAt;
 import static org.neo4j.cypherdsl.core.Functions.coalesce;
 import static org.neo4j.cypherdsl.core.Functions.collect;
 import static org.neo4j.cypherdsl.core.Functions.split;
+import static org.neo4j.cypherdsl.core.Functions.toLower;
 import static org.neo4j.cypherdsl.core.Functions.trim;
 import static org.neo4j.cypherdsl.core.executables.ExecutableStatement.makeExecutable;
 
@@ -42,19 +43,24 @@ public class BookService extends Neo4jService {
 		super(driver);
 	}
 
-	public CompletableFuture<List<Book>> updateBooks(boolean unreadOnly) {
+	public CompletableFuture<List<Book>> updateBooks(
+		String titleFilter,
+		Person authorFilter,
+		boolean unreadOnly
+	) {
 
 		var row = name("row");
-		var author = name("author");
-		var authors = name("authors");
+		var authorName = name("author");
 
-		var person = node("Person").withProperties("name", trim(author)).named("a");
 		var book = node("Book").named("b");
-
 		var bookTitle = book.property("title");
 		var bookState = book.property("state");
 
+		var author = node("Person").withProperties("name", trim(authorName)).named("a");
+		var authors = name("authors");
+
 		var conditions = createDefaultBookCondition(book, unreadOnly);
+		var additionalConditions = createAdditionalConditions(book, author, titleFilter, authorFilter);
 
 		var statement = makeExecutable(
 			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
@@ -65,14 +71,15 @@ public class BookService extends Neo4jService {
 				bookState.to(valueAt(row, 3))
 			)
 			.with(book, row)
-			.unwind(split(valueAt(row, 0), "&")).as(author)
-			.with(book, split(author, ",").as(author))
-			.with(book, trim(coalesce(valueAt(author, 1), literalOf(""))).concat(literalOf(" "))
-				.concat(trim(valueAt(author, 0))).as(author))
-			.merge(person)
-			.merge(person.relationshipTo(book, "WROTE").named("r"))
-			.with(book, collect(person).as(authors))
-			.where(conditions)
+			.unwind(split(valueAt(row, 0), "&")).as(authorName)
+			.with(book, split(authorName, ",").as(authorName))
+			.with(book, trim(coalesce(valueAt(authorName, 1), literalOf(""))).concat(literalOf(" "))
+				.concat(trim(valueAt(authorName, 0))).as(authorName))
+			.merge(author)
+			.merge(author.relationshipTo(book, "WROTE").named("r"))
+			.with(book, author)
+			.where(conditions).and(additionalConditions)
+			.with(book, collect(author).as(authors))
 			.returning(book.internalId().as("id"), bookTitle, bookState, authors )
 			.build());
 
@@ -81,30 +88,31 @@ public class BookService extends Neo4jService {
 
 	public CompletableFuture<List<Book>> findBooks(
 		String titleFilter,
-		Person personFilter,
+		Person authorFilter,
 		boolean unreadOnly,
 		DataFetchingFieldSelectionSet selectionSet
 	) {
 
 		var book = node("Book").named("b");
+		var possibleAuthor = node("Person").named("p");
+		var author = node("Person").named("a");
+
 		var conditions = createDefaultBookCondition(book, unreadOnly);
+		var additionalConditions =  createAdditionalConditions(book, possibleAuthor, titleFilter, authorFilter);
 
 		PatternElement patternToMatch = book;
-		if (personFilter != null) {
-			var p = node("Person").named("p");
-			patternToMatch = p.relationshipTo(book, "WROTE");
-			conditions = conditions.and(p.property("name").contains(anonParameter(personFilter.getName())));
+		if (additionalConditions != Conditions.noCondition()) {
+			patternToMatch = possibleAuthor.relationshipTo(book, "WROTE");
+			additionalConditions = additionalConditions.and(author.isEqualTo(possibleAuthor));
 		}
 
 		var match = match(patternToMatch);
 
 		var returnedExpressions = new ArrayList<Expression>();
 		returnedExpressions.add(Functions.id(book).as("id"));
-		if (selectionSet.contains("authors") || personFilter != null) {
-			var a = name("a");
-			var r = name("w");
-			match = match.match(book.relationshipFrom(node("Person").named(a), "WROTE").named(r));
-			returnedExpressions.add(collect(a).as("authors"));
+		if (selectionSet.contains("authors") || authorFilter != null) {
+			match = match.match(book.relationshipFrom(author, "WROTE"));
+			returnedExpressions.add(collect(author).as("authors"));
 		}
 
 		selectionSet.getImmediateFields().stream().map(SelectedField::getName)
@@ -114,22 +122,34 @@ public class BookService extends Neo4jService {
 			.forEach(returnedExpressions::add);
 
 		var statement = makeExecutable(
-			match.where(Optional.ofNullable(titleFilter).map(String::trim).filter(Predicate.not(String::isBlank))
-				.map(v -> book.property("title").contains(anonParameter(titleFilter)))
-				.orElseGet(Conditions::noCondition))
-				.and(conditions)
+			match.where(conditions).and(additionalConditions)
 				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
 		);
+
 		return executeReadStatement(statement, Book::of);
 	}
 
-	private static Condition createDefaultBookCondition(Node bookNode, boolean unreadOnly) {
+	private static Condition createDefaultBookCondition(Node book, boolean unreadOnly) {
 
 		var conditions = Conditions.noCondition();
 		if (unreadOnly) {
-			conditions = bookNode.property("state").isEqualTo(literalOf("U"));
+			conditions = book.property("state").isEqualTo(literalOf("U"));
 		}
 		return conditions;
+	}
+
+	private static Condition createAdditionalConditions(Node book, Node author, String titleFilter, Person authorFilter) {
+
+		var additionalConditions = Optional.ofNullable(titleFilter).map(String::trim)
+			.filter(Predicate.not(String::isBlank))
+			.map(v -> toLower(book.property("title")).contains(toLower(anonParameter(titleFilter))))
+			.orElseGet(Conditions::noCondition);
+
+		if (authorFilter != null) {
+			additionalConditions = additionalConditions
+				.or(toLower(author.property("name")).contains(toLower(anonParameter(authorFilter.getName()))));
+		}
+		return additionalConditions;
 	}
 }
