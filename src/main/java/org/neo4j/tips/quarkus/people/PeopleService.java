@@ -56,34 +56,34 @@ public class PeopleService extends Neo4jService {
 		DataFetchingFieldSelectionSet selectionSet) {
 
 		var returnedExpressions = new ArrayList<Expression>();
-		var p = node("Person").named("p");
+		var person = node("Person").named("p");
 
-		var match = match(p).with(p);
+		var match = match(person).with(person);
 		if (movieFilter != null) {
-			var m = node("Movie").named("m");
-			match = match(p.relationshipTo(m, "ACTED_IN"))
-				.where(m.internalId().eq(anonParameter(movieFilter.getId())))
-				.with(p);
+			var movie = node("Movie").named("m");
+			match = match(person.relationshipTo(movie, "ACTED_IN"))
+				.where(movie.internalId().eq(anonParameter(movieFilter.getId())))
+				.with(person);
 		}
 
 		if (selectionSet.contains("actedIn")) {
-			var m = node("Movie").named("m");
+			var movie = node("Movie").named("m");
 			var actedIn = name("actedIn");
 
 			match = match
-				.optionalMatch(p.relationshipTo(m, "ACTED_IN"))
-				.with(p, collect(m).as(actedIn));
+				.optionalMatch(person.relationshipTo(movie, "ACTED_IN"))
+				.with(person, collect(movie).as(actedIn));
 			returnedExpressions.add(actedIn);
 		}
 
 		if (selectionSet.contains("wrote")) {
-			var b = node("Book").named("b");
+			var book = node("Book").named("b");
 			var wrote = name("wrote");
 
 			var newVariables = new HashSet<>(returnedExpressions);
-			newVariables.addAll(List.of(p.getRequiredSymbolicName(), collect(b).as("wrote")));
+			newVariables.addAll(List.of(person.getRequiredSymbolicName(), collect(book).as("wrote")));
 			match = match
-				.optionalMatch(p.relationshipTo(b, "WROTE"))
+				.optionalMatch(person.relationshipTo(book, "WROTE"))
 				.with(newVariables.toArray(Expression[]::new));
 			returnedExpressions.add(wrote);
 		}
@@ -91,13 +91,13 @@ public class PeopleService extends Neo4jService {
 		Stream.concat(Stream.of("name"), selectionSet.getImmediateFields().stream().map(SelectedField::getName))
 			.distinct()
 			.filter(n -> !("actedIn".equals(n) || "wrote".equals(n)))
-			.map(n -> p.property(n).as(n))
+			.map(n -> person.property(n).as(n))
 			.forEach(returnedExpressions::add);
 
 		var statement = makeExecutable(
 			match
 				.where(Optional.ofNullable(nameFilter).map(String::trim).filter(Predicate.not(String::isBlank))
-					.map(v -> p.property("name").contains(anonParameter(nameFilter)))
+					.map(v -> person.property("name").contains(anonParameter(nameFilter)))
 					.orElseGet(Conditions::noCondition))
 				.returning(returnedExpressions.toArray(Expression[]::new))
 				.build()
