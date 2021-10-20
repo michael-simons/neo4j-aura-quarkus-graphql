@@ -42,10 +42,10 @@ public class MovieService extends Neo4jService {
 		var p = node("Person").named("p");
 		var m = node("Movie").named("m");
 		var statement = makeExecutable(match(p.relationshipTo(m, "ACTED_IN").named("r"))
-			.where(m.internalId().eq(anonParameter(movie.getId())))
+			.where(m.internalId().eq(anonParameter(movie.id())))
 			.returning(p.property("name").as("name"), name("r").property("roles").as("roles")).build());
 
-		var peopleByName = people.stream().collect(Collectors.toMap(Person::getName, Function.identity()));
+		var peopleByName = people.stream().collect(Collectors.toMap(Person::name, Function.identity()));
 
 		return executeReadStatement(statement,
 			r -> new Actor(peopleByName.get(r.get("name").asString()), r.get("roles").asList(Value::asString)));
@@ -61,7 +61,7 @@ public class MovieService extends Neo4jService {
 
 		PatternElement patternToMatch = m;
 		if (personFilter != null) {
-			var p = node("Person").named("p").withProperties("name", anonParameter(personFilter.getName()));
+			var p = node("Person").named("p").withProperties("name", anonParameter(personFilter.name()));
 			patternToMatch = p.relationshipTo(m, "ACTED_IN");
 		}
 
