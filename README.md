@@ -33,7 +33,7 @@ Either download an instance on https://neo4j.com/downloads (Desktop or stand-alo
 To quickly get a temporary instance with the configured credentials up and running, just enter
 
 ```
-docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/secret neo4j:4.2
+docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/secret neo4j:4.4
 ```
 
 in you terminal. If you want to read up which folders can be mapped and other environment variables, 
