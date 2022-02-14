@@ -16,6 +16,7 @@ https://neo4j-aura-quarkus-graphql.herokuapp.com. The image has been build with:
 ./mvnw clean package\
   -Pnative\
   -Dquarkus.native.container-build=true\
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:21.3-java17\
   -Dquarkus.docker.dockerfile-native-path=./src/main/docker/Dockerfile.native-distroless\
   -Dquarkus.container-image.build=true\
   -Dquarkus.container-image.group=registry.heroku.com/neo4j-aura-quarkus-graphql\
@@ -35,12 +36,16 @@ heroku container:release web --app neo4j-aura-quarkus-graphql
 There are several ways to run a Neo4j instance.
 Either download an instance on https://neo4j.com/downloads (Desktop or stand-alone) or use the official Docker image.
 
+### Just use Quarkus dev-services
+
+If you have Docker installed and don't change the default configuration, Quarkus will bring up a Neo4j instance via [Testcontainers](https://www.testcontainers.org) for you.
+
 ### Using the Docker image
 
 To quickly get a temporary instance with the configured credentials up and running, just enter
 
 ```
-docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/secret neo4j:4.2
+docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/secret neo4j:4.3
 ```
 
 in you terminal. If you want to read up which folders can be mapped and other environment variables, 
