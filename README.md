@@ -16,10 +16,18 @@ https://neo4j-aura-quarkus-graphql.herokuapp.com. The image has been build with:
 ./mvnw clean package\
   -Pnative\
   -Dquarkus.native.container-build=true\
+  -Dquarkus.docker.dockerfile-native-path=./src/main/docker/Dockerfile.native-distroless\
   -Dquarkus.container-image.build=true\
   -Dquarkus.container-image.group=registry.heroku.com/neo4j-aura-quarkus-graphql\
   -Dquarkus.container-image.name=web\
   -Dquarkus.container-image.tag=latest
+```
+
+We publish things as recommended in the [guide](https://quarkus.io/guides/deploying-to-heroku):
+
+```
+docker push registry.heroku.com/neo4j-aura-quarkus-graphql/web
+heroku container:release web --app neo4j-aura-quarkus-graphql
 ```
 
 ## Run Neo4j

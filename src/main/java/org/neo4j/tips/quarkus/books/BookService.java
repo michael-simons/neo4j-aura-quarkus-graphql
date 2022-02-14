@@ -115,9 +115,10 @@ public class BookService extends Neo4jService {
 			returnedExpressions.add(collect(author).as("authors"));
 		}
 
+		Predicate<String> isRequiredField = (String n) ->  "authors".equals(n) || "id".equals(n);
 		selectionSet.getImmediateFields().stream().map(SelectedField::getName)
 			.distinct()
-			.filter(n -> !("authors".equals(n) || "id".equals(n)))
+			.filter(isRequiredField.negate())
 			.map(n -> book.property(n).as(n))
 			.forEach(returnedExpressions::add);
 
