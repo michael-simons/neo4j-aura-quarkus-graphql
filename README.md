@@ -16,7 +16,7 @@ https://neo4j-aura-quarkus-graphql.herokuapp.com. The image has been build with:
 ./mvnw clean package\
   -Pnative\
   -Dquarkus.native.container-build=true\
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:21.3-java17\
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:22.1-java17\
   -Dquarkus.docker.dockerfile-native-path=./src/main/docker/Dockerfile.native-distroless\
   -Dquarkus.container-image.build=true\
   -Dquarkus.container-image.group=registry.heroku.com/neo4j-aura-quarkus-graphql\

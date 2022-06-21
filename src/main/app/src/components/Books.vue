@@ -4,7 +4,7 @@
       Book sources are there: <a href="https://github.com/michael-simons/goodreads">michael-simons/goodreads</a>,
       a GraphQL UI instance is <a
         href="/q/graphql-ui/?query=%7B%0A%20%20books%20%7B%0A%20%20%20%20title%0A%20%20%20%20authors%20%7B%0A%20%20%20%20%20%20name%0A%20%20%20%20%7D%0A%20%20%7D%0A%7D%0A">here</a>
-      and last but not least, the sources of this applications are on GitHub as well: <a
+      and last but not least, the sources of this application are on GitHub as well: <a
         href="https://github.com/michael-simons/neo4j-aura-quarkus-graphql">michael-simons/neo4j-aura-quarkus-graphql</a>.
     </p>
     <form
