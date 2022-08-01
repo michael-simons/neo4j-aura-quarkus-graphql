@@ -18,7 +18,7 @@
 #
 # Then run the container using :
 #
-# docker run -i --rm -p 8080:8080 -p 5005:5005 -e JAVA_ENABLE_DEBUG="true" quarkus/neo4j-aura-quarkus-graphql-jvm
+# docker run -i --rm -p 8080:8080 quarkus/neo4j-aura-quarkus-graphql-jvm
 #
 # This image uses the `run-java.sh` script to run the application.
 # This scripts computes the command line to execute your Java application, and
