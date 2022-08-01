@@ -62,7 +62,7 @@ public class PeopleService extends Neo4jService {
 		if (movieFilter != null) {
 			var movie = node("Movie").named("m");
 			match = match(person.relationshipTo(movie, "ACTED_IN"))
-				.where(movie.internalId().eq(anonParameter(movieFilter.getId())))
+				.where(movie.internalId().eq(anonParameter(movieFilter.id())))
 				.with(person);
 		}
 
@@ -108,7 +108,7 @@ public class PeopleService extends Neo4jService {
 	public CompletableFuture<String> getShortBio(Person person) {
 
 		var wikiUri = URI
-			.create("https://en.wikipedia.org/api/rest_v1/page/summary/" + person.getName().replaceAll("\\s", "_"));
+			.create("https://en.wikipedia.org/api/rest_v1/page/summary/" + person.name().replaceAll("\\s", "_"));
 		return httpClient
 			.sendAsync(HttpRequest.newBuilder().uri(wikiUri).build(), HttpResponse.BodyHandlers.ofInputStream())
 			.thenApply(response -> {

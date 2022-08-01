@@ -2,7 +2,6 @@ package org.neo4j.tips.quarkus.utils;
 
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
@@ -43,7 +42,7 @@ public final class RecordMapAccessor implements MapAccessor {
 
 	@Override
 	public <T> Iterable<T> values(Function<Value, T> mapFunction) {
-		return this.delegate.values().stream().map(mapFunction).collect(Collectors.toList());
+		return this.delegate.values().stream().map(mapFunction).toList();
 	}
 
 	@Override

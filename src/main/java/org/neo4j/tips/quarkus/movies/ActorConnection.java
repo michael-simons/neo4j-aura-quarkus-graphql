@@ -2,15 +2,9 @@ package org.neo4j.tips.quarkus.movies;
 
 import java.util.List;
 
-public class ActorConnection {
+public record ActorConnection(List<Actor> edges) {
 
-	private final List<Actor> edges;
-
-	public ActorConnection(List<Actor> edges) {
-		this.edges = edges;
-	}
-
-	public List<Actor> getEdges() {
-		return edges;
+	public ActorConnection {
+		edges = List.copyOf(edges);
 	}
 }

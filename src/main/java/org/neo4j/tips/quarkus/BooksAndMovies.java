@@ -84,8 +84,8 @@ public class BooksAndMovies {
 
 	public CompletionStage<List<Movie>> actedIn(@Source Person person) {
 
-		if (person.getActedIn() != null) {
-			return CompletableFuture.completedFuture(person.getActedIn());
+		if (person.actedIn() != null) {
+			return CompletableFuture.completedFuture(person.actedIn());
 		}
 
 		var env = context.unwrap(DataFetchingEnvironment.class);
@@ -94,8 +94,8 @@ public class BooksAndMovies {
 
 	public CompletionStage<ActorConnection> actors(@Source Movie movie) {
 
-		if (movie.getActors() != null) {
-			return CompletableFuture.completedFuture(movie.getActors());
+		if (movie.actors() != null) {
+			return CompletableFuture.completedFuture(movie.actors());
 		}
 
 		var env = context.unwrap(DataFetchingEnvironment.class);
@@ -106,8 +106,8 @@ public class BooksAndMovies {
 
 	public CompletionStage<List<Book>> wrote(@Source Person person) {
 
-		if (person.getWrote() != null) {
-			return CompletableFuture.completedFuture(person.getWrote());
+		if (person.wrote() != null) {
+			return CompletableFuture.completedFuture(person.wrote());
 		}
 
 		var env = context.unwrap(DataFetchingEnvironment.class);

@@ -149,7 +149,7 @@ public class BookService extends Neo4jService {
 
 		if (authorFilter != null) {
 			additionalConditions = additionalConditions
-				.or(toLower(author.property("name")).contains(toLower(anonParameter(authorFilter.getName()))));
+				.or(toLower(author.property("name")).contains(toLower(anonParameter(authorFilter.name()))));
 		}
 		return additionalConditions;
 	}
