@@ -98,7 +98,7 @@ public class BookService extends Neo4jService {
 		var author = node("Person").named("a");
 
 		var conditions = createDefaultBookCondition(book, unreadOnly);
-		var additionalConditions =  createAdditionalConditions(book, possibleAuthor, titleFilter, authorFilter);
+		var additionalConditions = createAdditionalConditions(book, possibleAuthor, titleFilter, authorFilter);
 
 		PatternElement patternToMatch = book;
 		if (additionalConditions != Conditions.noCondition()) {
