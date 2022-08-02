@@ -101,7 +101,7 @@ public class BooksAndMovies {
 		var env = context.unwrap(DataFetchingEnvironment.class);
 		return peopleService.findPeople(null, movie, env.getSelectionSet())
 			.thenCompose(people -> movieService.findRoles(movie, people))
-			.thenApply(actors -> new ActorConnection(actors));
+			.thenApply(ActorConnection::new);
 	}
 
 	public CompletionStage<List<Book>> wrote(@Source Person person) {
