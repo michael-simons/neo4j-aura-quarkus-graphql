@@ -2,7 +2,7 @@
 
 This project uses 
 
-* [Neo4j Aura](https://www.google.com/search?client=safari&rls=en&q=neo4j+aura&ie=UTF-8&oe=UTF-8)
+* [Neo4j Aura](https://neo4j.com/cloud/platform/aura-graph-database/)
 * The [Neo4j Java Driver](https://github.com/neo4j/neo4j-java-driver) with [Quarkus](https://quarkus.io)
 * and the [Neo4j-Cypher-DSL](https://github.com/neo4j-contrib/cypher-dsl)
 
