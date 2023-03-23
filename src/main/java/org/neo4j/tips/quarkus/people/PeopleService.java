@@ -28,6 +28,7 @@ import javax.inject.Singleton;
 
 import org.neo4j.cypherdsl.core.Conditions;
 import org.neo4j.cypherdsl.core.Expression;
+import org.neo4j.cypherdsl.core.IdentifiableElement;
 import org.neo4j.driver.Driver;
 import org.neo4j.tips.quarkus.movies.Movie;
 import org.neo4j.tips.quarkus.utils.Neo4jService;
@@ -55,7 +56,7 @@ public class PeopleService extends Neo4jService {
 	public CompletableFuture<List<Person>> findPeople(String nameFilter, Movie movieFilter,
 		DataFetchingFieldSelectionSet selectionSet) {
 
-		var returnedExpressions = new ArrayList<Expression>();
+		var returnedExpressions = new ArrayList<IdentifiableElement>();
 		var person = node("Person").named("p");
 
 		var match = match(person).with(person);
@@ -84,7 +85,7 @@ public class PeopleService extends Neo4jService {
 			newVariables.addAll(List.of(person.getRequiredSymbolicName(), collect(book).as("wrote")));
 			match = match
 				.optionalMatch(person.relationshipTo(book, "WROTE"))
-				.with(newVariables.toArray(Expression[]::new));
+				.with(newVariables.toArray(IdentifiableElement[]::new));
 			returnedExpressions.add(wrote);
 		}
 
@@ -99,7 +100,7 @@ public class PeopleService extends Neo4jService {
 				.where(Optional.ofNullable(nameFilter).map(String::trim).filter(Predicate.not(String::isBlank))
 					.map(v -> person.property("name").contains(anonParameter(nameFilter)))
 					.orElseGet(Conditions::noCondition))
-				.returning(returnedExpressions.toArray(Expression[]::new))
+				.returning(returnedExpressions.stream().map(Expression.class::cast).toArray(Expression[]::new))
 				.build()
 		);
 		return executeReadStatement(statement, Person::of);
