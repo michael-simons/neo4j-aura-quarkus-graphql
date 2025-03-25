@@ -6,18 +6,19 @@
   <artifactId>neo4j-aura-quarkus-graphql</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <properties>
-    <compiler-plugin.version>3.10.1</compiler-plugin.version>
+    <compiler-plugin.version>3.14.0</compiler-plugin.version>
     <failsafe.useModulePath>false</failsafe.useModulePath>
     <maven.compiler.parameters>true</maven.compiler.parameters>
-    <maven.compiler.release>17</maven.compiler.release>
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-    <quarkus.platform.version>2.16.5.Final</quarkus.platform.version>
-    <surefire-plugin.version>3.0.0-M7</surefire-plugin.version>
-    <frontend-maven-plugin.version>1.12.0</frontend-maven-plugin.version>
-    <maven-resources-plugin.version>3.3.0</maven-resources-plugin.version>
+    <quarkus.platform.version>3.19.4</quarkus.platform.version>
+    <surefire-plugin.version>3.5.2</surefire-plugin.version>
+    <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
+    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+    <skipITs>true</skipITs>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -34,7 +35,7 @@
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-cypher-dsl</artifactId>
-      <version>2023.2.0</version>
+      <version>2024.5.1</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -43,12 +44,12 @@
     <dependency>
       <groupId>io.quarkiverse.neo4j</groupId>
       <artifactId>quarkus-neo4j</artifactId>
-      <version>2.2.4</version>
+      <version>5.2.1</version>
     </dependency>
     <dependency>
       <groupId>eu.michael-simons.neo4j</groupId>
       <artifactId>neo4j-migrations-quarkus</artifactId>
-      <version>2.2.1</version>
+      <version>2.17.0</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -144,6 +145,7 @@
               <goal>build</goal>
               <goal>generate-code</goal>
               <goal>generate-code-tests</goal>
+              <goal>native-image-agent</goal>
             </goals>
           </execution>
         </executions>
@@ -165,6 +167,25 @@
           </systemPropertyVariables>
         </configuration>
       </plugin>
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>${surefire-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <systemPropertyVariables>
+            <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+            <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+            <maven.home>${maven.home}</maven.home>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <profiles>
@@ -175,31 +196,9 @@
           <name>native</name>
         </property>
       </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-failsafe-plugin</artifactId>
-            <version>${surefire-plugin.version}</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>integration-test</goal>
-                  <goal>verify</goal>
-                </goals>
-                <configuration>
-                  <systemPropertyVariables>
-                    <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
-                    <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                    <maven.home>${maven.home}</maven.home>
-                  </systemPropertyVariables>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
       <properties>
-        <quarkus.package.type>native</quarkus.package.type>
+        <skipITs>false</skipITs>
+        <quarkus.native.enabled>true</quarkus.native.enabled>
       </properties>
     </profile>
   </profiles>

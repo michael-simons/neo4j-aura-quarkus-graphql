@@ -1,14 +1,8 @@
 package org.neo4j.tips.quarkus;
 
-import graphql.schema.DataFetchingEnvironment;
-import io.smallrye.graphql.api.Context;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 import org.eclipse.microprofile.graphql.DefaultValue;
 import org.eclipse.microprofile.graphql.Description;
@@ -24,6 +18,11 @@ import org.neo4j.tips.quarkus.movies.Movie;
 import org.neo4j.tips.quarkus.movies.MovieService;
 import org.neo4j.tips.quarkus.people.PeopleService;
 import org.neo4j.tips.quarkus.people.Person;
+
+import graphql.schema.DataFetchingEnvironment;
+import io.smallrye.graphql.api.Context;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 @GraphQLApi
 @ApplicationScoped

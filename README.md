@@ -16,8 +16,8 @@ https://neo4j-aura-quarkus-graphql.herokuapp.com. The image has been build with:
 ./mvnw clean package\
   -Pnative\
   -Dquarkus.native.container-build=true\
-  -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-native-image:22.2-java17\
-  -Dquarkus.docker.dockerfile-native-path=./src/main/docker/Dockerfile.native-distroless\
+  -Dquarkus.native.builder-image=quay.io/quarkus/ubi9-quarkus-mandrel-builder-image:jdk-21\
+  -Dquarkus.docker.dockerfile-native-path=./src/main/docker/Dockerfile.native-micro\
   -Dquarkus.container-image.build=true\
   -Dquarkus.container-image.group=registry.heroku.com/neo4j-aura-quarkus-graphql\
   -Dquarkus.container-image.name=web\
@@ -45,7 +45,7 @@ If you have Docker installed and don't change the default configuration, Quarkus
 To quickly get a temporary instance with the configured credentials up and running, just enter
 
 ```
-docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/secret neo4j:4.4
+docker run -p7474:7474 -p7687:7687 --env NEO4J_AUTH=neo4j/verysecret neo4j:5.26
 ```
 
 in you terminal. If you want to read up which folders can be mapped and other environment variables, 
@@ -81,20 +81,28 @@ If you want to build an _über-jar_, execute the following command:
 ./mvnw package -Dquarkus.package.type=uber-jar
 ```
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+The application is now runnable using 
+
+```
+java -Dquarkus.neo4j.authentication.password=verysecret -jar target/quarkus-app/quarkus-run.jar
+```
 
 ## Creating a native executable
 
 You can create a native executable using: 
 ```shell script
-./mvnw package -Pnative
+./mvnw package -Dnative
 ```
 
 Or, if you don't have GraalVM installed, you can run the native executable build in a container using: 
 ```shell script
-./mvnw package -Pnative -Dquarkus.native.container-build=true
+./mvnw package -Dnative -Dquarkus.native.container-build=true
 ```
 
-You can then execute your native executable with: `./target/neo4j-aura-quarkus-graphql-1.0.0-SNAPSHOT-runner`
+You can then execute your native executable with: 
+
+```
+./target/neo4j-aura-quarkus-graphql-1.0.0-SNAPSHOT-runner -Dquarkus.neo4j.authentication.password=verysecret
+```
 
 If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.html.

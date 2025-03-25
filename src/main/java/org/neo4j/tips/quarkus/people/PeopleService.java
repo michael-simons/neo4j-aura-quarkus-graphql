@@ -1,14 +1,10 @@
 package org.neo4j.tips.quarkus.people;
 
 import static org.neo4j.cypherdsl.core.Cypher.anonParameter;
+import static org.neo4j.cypherdsl.core.Cypher.collect;
 import static org.neo4j.cypherdsl.core.Cypher.match;
 import static org.neo4j.cypherdsl.core.Cypher.name;
 import static org.neo4j.cypherdsl.core.Cypher.node;
-import static org.neo4j.cypherdsl.core.Functions.collect;
-import static org.neo4j.cypherdsl.core.executables.ExecutableStatement.makeExecutable;
-
-import graphql.schema.DataFetchingFieldSelectionSet;
-import graphql.schema.SelectedField;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -24,9 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import javax.inject.Singleton;
-
-import org.neo4j.cypherdsl.core.Conditions;
+import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
 import org.neo4j.cypherdsl.core.IdentifiableElement;
 import org.neo4j.driver.Driver;
@@ -34,6 +28,9 @@ import org.neo4j.tips.quarkus.movies.Movie;
 import org.neo4j.tips.quarkus.utils.Neo4jService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import graphql.schema.DataFetchingFieldSelectionSet;
+import graphql.schema.SelectedField;
+import jakarta.inject.Singleton;
 
 @Singleton
 public class PeopleService extends Neo4jService {
@@ -95,14 +92,12 @@ public class PeopleService extends Neo4jService {
 			.map(n -> person.property(n).as(n))
 			.forEach(returnedExpressions::add);
 
-		var statement = makeExecutable(
-			match
+		var statement = match
 				.where(Optional.ofNullable(nameFilter).map(String::trim).filter(Predicate.not(String::isBlank))
 					.map(v -> person.property("name").contains(anonParameter(nameFilter)))
-					.orElseGet(Conditions::noCondition))
+					.orElseGet(Cypher::noCondition))
 				.returning(returnedExpressions.stream().map(Expression.class::cast).toArray(Expression[]::new))
-				.build()
-		);
+				.build();
 		return executeReadStatement(statement, Person::of);
 	}
 

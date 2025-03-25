@@ -5,12 +5,11 @@ import java.util.List;
 
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Id;
-import org.neo4j.driver.Record;
+import org.eclipse.microprofile.graphql.Ignore;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.types.MapAccessor;
 import org.neo4j.tips.quarkus.books.Book;
 import org.neo4j.tips.quarkus.movies.Movie;
-import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
 
 @Description("A person has some information about themselves and maybe played in a movie or is an author and wrote books.")
 public record Person(
@@ -19,8 +18,10 @@ public record Person(
 
 	Integer born,
 
+	@Ignore
 	List<Movie> actedIn,
 
+	@Ignore
 	List<Book> wrote
 ) {
 
@@ -35,10 +36,6 @@ public record Person(
 		}
 
 		return new Person(name);
-	}
-
-	public static Person of(Record r) {
-		return of(new RecordMapAccessor(r));
 	}
 
 	public static Person of(MapAccessor r) {

@@ -1,21 +1,17 @@
 package org.neo4j.tips.quarkus.books;
 
 import static org.neo4j.cypherdsl.core.Cypher.anonParameter;
+import static org.neo4j.cypherdsl.core.Cypher.coalesce;
+import static org.neo4j.cypherdsl.core.Cypher.collect;
 import static org.neo4j.cypherdsl.core.Cypher.literalOf;
 import static org.neo4j.cypherdsl.core.Cypher.loadCSV;
 import static org.neo4j.cypherdsl.core.Cypher.match;
 import static org.neo4j.cypherdsl.core.Cypher.name;
 import static org.neo4j.cypherdsl.core.Cypher.node;
+import static org.neo4j.cypherdsl.core.Cypher.split;
+import static org.neo4j.cypherdsl.core.Cypher.toLower;
+import static org.neo4j.cypherdsl.core.Cypher.trim;
 import static org.neo4j.cypherdsl.core.Cypher.valueAt;
-import static org.neo4j.cypherdsl.core.Functions.coalesce;
-import static org.neo4j.cypherdsl.core.Functions.collect;
-import static org.neo4j.cypherdsl.core.Functions.split;
-import static org.neo4j.cypherdsl.core.Functions.toLower;
-import static org.neo4j.cypherdsl.core.Functions.trim;
-import static org.neo4j.cypherdsl.core.executables.ExecutableStatement.makeExecutable;
-
-import graphql.schema.DataFetchingFieldSelectionSet;
-import graphql.schema.SelectedField;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -24,17 +20,18 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
-import javax.inject.Singleton;
-
 import org.neo4j.cypherdsl.core.Condition;
-import org.neo4j.cypherdsl.core.Conditions;
+import org.neo4j.cypherdsl.core.Cypher;
 import org.neo4j.cypherdsl.core.Expression;
-import org.neo4j.cypherdsl.core.Functions;
 import org.neo4j.cypherdsl.core.Node;
 import org.neo4j.cypherdsl.core.PatternElement;
 import org.neo4j.driver.Driver;
 import org.neo4j.tips.quarkus.people.Person;
 import org.neo4j.tips.quarkus.utils.Neo4jService;
+
+import graphql.schema.DataFetchingFieldSelectionSet;
+import graphql.schema.SelectedField;
+import jakarta.inject.Singleton;
 
 @Singleton
 public class BookService extends Neo4jService {
@@ -62,16 +59,17 @@ public class BookService extends Neo4jService {
 		var conditions = createDefaultBookCondition(book, unreadOnly);
 		var additionalConditions = createAdditionalConditions(book, author, titleFilter, authorFilter);
 
-		var statement = makeExecutable(
-			loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), false)
-			.as(row).withFieldTerminator(";")
-			.merge(book.withProperties(bookTitle, trim(valueAt(row, 1))))
+		@SuppressWarnings("deprecation")
+		var bookId = book.internalId().as("id");
+		var statement = loadCSV(URI.create("https://raw.githubusercontent.com/michael-simons/goodreads/master/all.csv"), true)
+			.as(row)
+			.merge(book.withProperties(bookTitle, trim(valueAt(row, Cypher.literalOf("Title")))))
 			.set(
-				book.property("type").to(valueAt(row, 2)),
-				bookState.to(valueAt(row, 3))
+				book.property("type").to(valueAt(row, literalOf("Type"))),
+				bookState.to(valueAt(row, literalOf("State")))
 			)
 			.with(book, row)
-			.unwind(split(valueAt(row, 0), "&")).as(authorName)
+			.unwind(split(valueAt(row, literalOf("Author")), "&")).as(authorName)
 			.with(book, split(authorName, ",").as(authorName))
 			.with(book, trim(coalesce(valueAt(authorName, 1), literalOf(""))).concat(literalOf(" "))
 				.concat(trim(valueAt(authorName, 0))).as(authorName))
@@ -80,8 +78,8 @@ public class BookService extends Neo4jService {
 			.with(book, author)
 			.where(conditions).and(additionalConditions)
 			.with(book, collect(author).as(authors))
-			.returning(book.internalId().as("id"), bookTitle, bookState, authors )
-			.build());
+			.returning(bookId, bookTitle, bookState, authors )
+			.build();
 
 		return executeWriteStatement(statement, Book::of);
 	}
@@ -101,7 +99,7 @@ public class BookService extends Neo4jService {
 		var additionalConditions = createAdditionalConditions(book, possibleAuthor, titleFilter, authorFilter);
 
 		PatternElement patternToMatch = book;
-		if (additionalConditions != Conditions.noCondition()) {
+		if (additionalConditions != Cypher.noCondition()) {
 			patternToMatch = possibleAuthor.relationshipTo(book, "WROTE");
 			additionalConditions = additionalConditions.and(author.isEqualTo(possibleAuthor));
 		}
@@ -109,7 +107,9 @@ public class BookService extends Neo4jService {
 		var match = match(patternToMatch);
 
 		var returnedExpressions = new ArrayList<Expression>();
-		returnedExpressions.add(Functions.id(book).as("id"));
+		@SuppressWarnings("deprecation")
+		var bookId = book.internalId().as("id");
+		returnedExpressions.add(bookId);
 		if (selectionSet.contains("authors") || authorFilter != null) {
 			match = match.match(book.relationshipFrom(author, "WROTE"));
 			returnedExpressions.add(collect(author).as("authors"));
@@ -122,18 +122,16 @@ public class BookService extends Neo4jService {
 			.map(n -> book.property(n).as(n))
 			.forEach(returnedExpressions::add);
 
-		var statement = makeExecutable(
-			match.where(conditions).and(additionalConditions)
+		var statement = match.where(conditions).and(additionalConditions)
 				.returning(returnedExpressions.toArray(Expression[]::new))
-				.build()
-		);
+				.build();
 
 		return executeReadStatement(statement, Book::of);
 	}
 
 	private static Condition createDefaultBookCondition(Node book, boolean unreadOnly) {
 
-		var conditions = Conditions.noCondition();
+		var conditions = Cypher.noCondition();
 		if (unreadOnly) {
 			conditions = book.property("state").isEqualTo(literalOf("U"));
 		}
@@ -145,7 +143,7 @@ public class BookService extends Neo4jService {
 		var additionalConditions = Optional.ofNullable(titleFilter).map(String::trim)
 			.filter(Predicate.not(String::isBlank))
 			.map(v -> toLower(book.property("title")).contains(toLower(anonParameter(titleFilter))))
-			.orElseGet(Conditions::noCondition);
+			.orElseGet(Cypher::noCondition);
 
 		if (authorFilter != null) {
 			additionalConditions = additionalConditions

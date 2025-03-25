@@ -35,7 +35,7 @@ class BooksAndMoviesTest {
 			.then()
 			.statusCode(200)
 			.body("data.people[0].wrote.title",
-				Matchers.containsInAnyOrder("Spring Boot 2 – Moderne Softwareentwicklung mit Spring.",
-					"arc42 by Example"));
+				Matchers.containsInAnyOrder("Spring Boot 2 – Moderne Softwareentwicklung mit Spring 5",
+					"arc42 by Example", "DuckDB in Action"));
 	}
 }

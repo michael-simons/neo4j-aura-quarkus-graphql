@@ -4,12 +4,10 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.eclipse.microprofile.graphql.Id;
-import org.neo4j.driver.Record;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.types.MapAccessor;
 import org.neo4j.driver.types.Node;
 import org.neo4j.tips.quarkus.people.Person;
-import org.neo4j.tips.quarkus.utils.RecordMapAccessor;
 
 public record Book(
 
@@ -41,14 +39,12 @@ public record Book(
 		}
 	}
 
-	public static Book of(Record r) {
-		return of(new RecordMapAccessor(r));
-	}
-
 	public static Book of(MapAccessor r) {
 
+		@SuppressWarnings("deprecation")
+		var bookId = r instanceof Node node ? node.id() : r.get("id").asLong();
 		return new Book(
-			r instanceof Node node ? node.id() : r.get("id").asLong(),
+			bookId,
 			r.get("title").asString(r.get("b.title").asString()),
 			State.of(r.get("state").asString(r.get("b.state").asString())),
 			r.containsKey("authors") ? r.get("authors")
